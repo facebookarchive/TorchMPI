@@ -1,0 +1,81 @@
+/**
+ * Copyright (c) 2016-present, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ */
+/**********************************************************************
+ ********************** C Wrapper instantiations **********************
+ **********************************************************************/
+#define CPP_TYPE uint8_t
+#define MPI_TYPE MPI_BYTE
+#define TH_TENSOR_TYPE THByteTensor
+#define THC_TENSOR_TYPE THCudaByteTensor
+#include "parameterserver_wrappers.cpp.in"
+#undef CPP_TYPE
+#undef MPI_TYPE
+#undef TH_TENSOR_TYPE
+#undef THC_TENSOR_TYPE
+
+#define CPP_TYPE char
+#define MPI_TYPE MPI_CHAR
+#define TH_TENSOR_TYPE THCharTensor
+#define THC_TENSOR_TYPE THCudaCharTensor
+#include "parameterserver_wrappers.cpp.in"
+#undef CPP_TYPE
+#undef MPI_TYPE
+#undef TH_TENSOR_TYPE
+#undef THC_TENSOR_TYPE
+
+#define CPP_TYPE short
+#define MPI_TYPE MPI_SHORT
+#define TH_TENSOR_TYPE THShortTensor
+#define THC_TENSOR_TYPE THCudaShortTensor
+#include "parameterserver_wrappers.cpp.in"
+#undef CPP_TYPE
+#undef MPI_TYPE
+#undef TH_TENSOR_TYPE
+#undef THC_TENSOR_TYPE
+
+#define CPP_TYPE int
+#define MPI_TYPE MPI_INT
+#define TH_TENSOR_TYPE THIntTensor
+#define THC_TENSOR_TYPE THCudaIntTensor
+#include "parameterserver_wrappers.cpp.in"
+#undef CPP_TYPE
+#undef MPI_TYPE
+#undef TH_TENSOR_TYPE
+#undef THC_TENSOR_TYPE
+
+#define CPP_TYPE long
+#define MPI_TYPE MPI_LONG
+#define TH_TENSOR_TYPE THLongTensor
+#define THC_TENSOR_TYPE THCudaLongTensor
+#include "parameterserver_wrappers.cpp.in"
+#undef CPP_TYPE
+#undef MPI_TYPE
+#undef TH_TENSOR_TYPE
+#undef THC_TENSOR_TYPE
+
+#define CPP_TYPE float
+#define MPI_TYPE MPI_FLOAT
+#define TH_TENSOR_TYPE THFloatTensor
+// Backward compatibility
+#define THC_TENSOR_TYPE THCudaTensor
+#include "parameterserver_wrappers.cpp.in"
+#undef CPP_TYPE
+#undef MPI_TYPE
+#undef TH_TENSOR_TYPE
+#undef THC_TENSOR_TYPE
+
+#define CPP_TYPE double
+#define MPI_TYPE MPI_DOUBLE
+#define TH_TENSOR_TYPE THDoubleTensor
+#define THC_TENSOR_TYPE THCudaDoubleTensor
+#include "parameterserver_wrappers.cpp.in"
+#undef CPP_TYPE
+#undef MPI_TYPE
+#undef TH_TENSOR_TYPE
+#undef THC_TENSOR_TYPE

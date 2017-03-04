@@ -1,0 +1,68 @@
+/**
+ * Copyright (c) 2016-present, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ */
+/**********************************************************************
+ ********************** C Wrapper instantiations **********************
+ **********************************************************************/
+#define CPP_TYPE uint8_t
+#define TH_TENSOR_TYPE THByteTensor
+#define THC_TENSOR_TYPE THCudaByteTensor
+FUNCTIONS_TO_INSTANTIATE(CPP_TYPE, TH_TENSOR_TYPE, THC_TENSOR_TYPE)
+#undef CPP_TYPE
+#undef TH_TENSOR_TYPE
+#undef THC_TENSOR_TYPE
+
+#define CPP_TYPE char
+#define TH_TENSOR_TYPE THCharTensor
+#define THC_TENSOR_TYPE THCudaCharTensor
+FUNCTIONS_TO_INSTANTIATE(CPP_TYPE, TH_TENSOR_TYPE, THC_TENSOR_TYPE)
+#undef CPP_TYPE
+#undef TH_TENSOR_TYPE
+#undef THC_TENSOR_TYPE
+
+// TODO: nccl short does not exit, need to support ncclHalf
+// #define CPP_TYPE short
+// #define TH_TENSOR_TYPE THShortTensor
+// #define THC_TENSOR_TYPE THCudaShortTensor
+// FUNCTIONS_TO_INSTANTIATE(CPP_TYPE, TH_TENSOR_TYPE, THC_TENSOR_TYPE)
+// #undef CPP_TYPE
+// // #undef TH_TENSOR_TYPE
+// #undef THC_TENSOR_TYPE
+
+#define CPP_TYPE int
+#define TH_TENSOR_TYPE THIntTensor
+#define THC_TENSOR_TYPE THCudaIntTensor
+FUNCTIONS_TO_INSTANTIATE(CPP_TYPE, TH_TENSOR_TYPE, THC_TENSOR_TYPE)
+#undef CPP_TYPE
+#undef TH_TENSOR_TYPE
+#undef THC_TENSOR_TYPE
+
+#define CPP_TYPE long
+#define TH_TENSOR_TYPE THLongTensor
+#define THC_TENSOR_TYPE THCudaLongTensor
+FUNCTIONS_TO_INSTANTIATE(CPP_TYPE, TH_TENSOR_TYPE, THC_TENSOR_TYPE)
+#undef CPP_TYPE
+#undef TH_TENSOR_TYPE
+#undef THC_TENSOR_TYPE
+
+#define CPP_TYPE float
+#define TH_TENSOR_TYPE THFloatTensor
+// Backward compatibility
+#define THC_TENSOR_TYPE THCudaTensor
+FUNCTIONS_TO_INSTANTIATE(CPP_TYPE, TH_TENSOR_TYPE, THC_TENSOR_TYPE)
+#undef CPP_TYPE
+#undef TH_TENSOR_TYPE
+#undef THC_TENSOR_TYPE
+
+#define CPP_TYPE double
+#define TH_TENSOR_TYPE THDoubleTensor
+#define THC_TENSOR_TYPE THCudaDoubleTensor
+FUNCTIONS_TO_INSTANTIATE(CPP_TYPE, TH_TENSOR_TYPE, THC_TENSOR_TYPE)
+#undef CPP_TYPE
+#undef TH_TENSOR_TYPE
+#undef THC_TENSOR_TYPE

@@ -1,0 +1,142 @@
+/**
+ * Copyright (c) 2016-present, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ */
+/************************ General CPP Concat **************************/
+
+#define PPCAT_NX(A, B) A ## B
+#define PPCAT(A, B) PPCAT_NX(A, B)
+
+#define TH_DATA(RET_TYPE, THType)               \
+  template<> RET_TYPE data(THType* t)           \
+  { return PPCAT( THType, _data(t) ); }
+
+#define TH_CONTIGUOUS(THType)                   \
+  template<> bool isContiguous(const THType* t) \
+  { return PPCAT( THType, _isContiguous(t) ); }
+
+#define TH_NELEMENT(THType)                     \
+  template<> long nElement(const THType* t)     \
+  { return PPCAT( THType, _nElement(t) ); }
+
+#define TH_NEWWITHTENSOR(THType)                        \
+  template<> THType* newWithTensor(THType* t)  {        \
+    return PPCAT( THType, _newWithTensor(t) );          \
+  }
+
+#define TH_RESIZE1D(THType)                             \
+  template<> void resize1d(THType* t, long size) {      \
+    PPCAT( THType, _resize1d(t, size) );                \
+  }
+
+#define TH_NARROW(THType)                                               \
+  template<> void                                                       \
+  narrow(THType* t, int dimension, long firstIndex, long size)          \
+  {                                                                     \
+    return PPCAT( THType, _narrow(t, t, dimension, firstIndex, size) ); \
+  }
+
+#define TH_NEWCLONE(THType)                     \
+  template<> THType* newClone(THType* t)	\
+  { return PPCAT( THType, _newClone(t) ); }
+
+#define TH_FREE(THType)                         \
+  template<> void free(THType* t)		\
+  { return PPCAT( THType, _free(t) ); }
+
+#define TH_RETAIN(THType)                       \
+  template<> void retain(THType* t)		\
+  { return PPCAT( THType, _retain(t) ); }
+
+#define TH_FILL(THType, CPPType)                \
+  template<> void fill(THType* t, CPPType val)  \
+  { return PPCAT( THType, _fill(t, val) ); }
+
+#define TH_COPY(THType)                                 \
+  template<> void copy(THType* src, THType* dst)        \
+  { return PPCAT( THType, _copy(src, dst) ); }
+
+// res += t by default
+#define TH_CADD(THType, CPPType)                                \
+  template<>                                                    \
+  void cadd(THType* res, THType* t, CPPType val, THType* src) { \
+    src = (src) ? src : res;                                    \
+    return PPCAT( THType, _cadd(res, t, val, src) );            \
+  }
+
+#define TH_DIV(THType, CPPType)                                 \
+  template<> void div(THType* res, THType* t, CPPType val) {    \
+    return PPCAT( THType, _div(res, t, val) );                  \
+  }
+
+#define TH_STORAGE_RETAIN(THStorageType)                \
+  template<> void retain(THStorageType* t)		\
+  { return PPCAT( THStorageType, _retain(t) ); }
+
+#define TH_STORAGE_FREE(THStorageType)                  \
+  template<> void free(THStorageType* t)		\
+  { return PPCAT( THStorageType, _free(t) ); }
+
+namespace torch { namespace th {
+
+#define CPP_TYPE uint8_t
+#define TORCH_TENSOR_TYPE THByteTensor
+#define TORCH_STORAGE_TYPE THByteStorage
+#include "torch_type_wrappers.cpp.in"
+#undef CPP_TYPE
+#undef TORCH_TENSOR_TYPE
+#undef TORCH_STORAGE_TYPE
+
+#define CPP_TYPE char
+#define TORCH_TENSOR_TYPE THCharTensor
+#define TORCH_STORAGE_TYPE THCharStorage
+#include "torch_type_wrappers.cpp.in"
+#undef CPP_TYPE
+#undef TORCH_TENSOR_TYPE
+#undef TORCH_STORAGE_TYPE
+
+#define CPP_TYPE short
+#define TORCH_TENSOR_TYPE THShortTensor
+#define TORCH_STORAGE_TYPE THShortStorage
+#include "torch_type_wrappers.cpp.in"
+#undef CPP_TYPE
+#undef TORCH_TENSOR_TYPE
+#undef TORCH_STORAGE_TYPE
+
+#define CPP_TYPE int
+#define TORCH_TENSOR_TYPE THIntTensor
+#define TORCH_STORAGE_TYPE THIntStorage
+#include "torch_type_wrappers.cpp.in"
+#undef CPP_TYPE
+#undef TORCH_TENSOR_TYPE
+#undef TORCH_STORAGE_TYPE
+
+#define CPP_TYPE long
+#define TORCH_TENSOR_TYPE THLongTensor
+#define TORCH_STORAGE_TYPE THLongStorage
+#include "torch_type_wrappers.cpp.in"
+#undef CPP_TYPE
+#undef TORCH_TENSOR_TYPE
+#undef TORCH_STORAGE_TYPE
+
+#define CPP_TYPE float
+#define TORCH_TENSOR_TYPE THFloatTensor
+#define TORCH_STORAGE_TYPE THFloatStorage
+#include "torch_type_wrappers.cpp.in"
+#undef CPP_TYPE
+#undef TORCH_TENSOR_TYPE
+#undef TORCH_STORAGE_TYPE
+
+#define CPP_TYPE double
+#define TORCH_TENSOR_TYPE THDoubleTensor
+#define TORCH_STORAGE_TYPE THDoubleStorage
+#include "torch_type_wrappers.cpp.in"
+#undef CPP_TYPE
+#undef TORCH_TENSOR_TYPE
+#undef TORCH_STORAGE_TYPE
+
+}} // ns torch

@@ -1,0 +1,154 @@
+/**
+ * Copyright (c) 2016-present, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ */
+/************************ General CPP Concat **************************/
+
+#define PPCAT_NX(A, B) A ## B
+#define PPCAT(A, B) PPCAT_NX(A, B)
+
+#define THC_DATA(RET_TYPE, THType)                      \
+  template<> RET_TYPE data(THCState* state, THType* t)	\
+  { return PPCAT( THType, _data(state, t) ); }
+
+#define THC_CONTIGUOUS(THType)                                          \
+  template<> bool isContiguous(THCState* state, const THType* t)        \
+  { return PPCAT( THType, _isContiguous(state, t) ); }
+
+#define THC_NELEMENT(THType)                                    \
+  template<> long nElement(THCState* state, const THType* t)    \
+  { return PPCAT( THType, _nElement(state, t) ); }
+
+#define THC_NEWWITHTENSOR(THType)                                       \
+  template<> THType* newWithTensor(THCState* state, THType* t) {        \
+    return PPCAT( THType, _newWithTensor(state, t) );                   \
+  }
+
+#define THC_RESIZE1D(THType)                                            \
+  template<> void resize1d(THCState* state, THType* t, long size) {     \
+    PPCAT( THType, _resize1d(state, t, size) );                         \
+  }
+
+#define THC_NARROW(THType)						\
+  template<>                                                            \
+  void narrow(THCState* state,                                          \
+              THType* t,                                                \
+              int dimension,                                            \
+              long firstIndex,                                          \
+              long size)                                                \
+  {									\
+    return PPCAT( THType, _narrow(state, t, t, dimension, firstIndex, size) ); \
+  }
+
+#define THC_NEWCLONE(THType)					\
+  template<> THType* newClone(THCState* state, THType* t)	\
+  { return PPCAT( THType, _newClone(state, t) ); }
+
+#define THC_FREE(THType)                                \
+  template<> void free(THCState* state, THType* t)      \
+  { return PPCAT( THType, _free(state, t) ); }
+
+#define THC_RETAIN(THType)                              \
+  template<> void retain(THCState* state, THType* t)    \
+  { return PPCAT( THType, _retain(state, t) ); }
+
+#define THC_FILL(THType, CPPType)                               \
+  template<> void fill(THCState* state, THType* t, CPPType val) \
+  { return PPCAT( THType, _fill(state, t, val) ); }
+
+#define THC_COPY(THType)                                                \
+  template<> void copy(THCState* state, THType* src, THType* dst)       \
+  { return PPCAT( THType, _copy(state, src, dst) ); }
+
+// res += t by default
+#define THC_CADD(THType, CPPType)                               \
+  template<> void                                               \
+  cadd(THCState* state,                                         \
+       THType* res,                                             \
+       THType* t,                                               \
+       CPPType val,                                             \
+       THType* src) {                                           \
+    src = (src) ? src : res;                                    \
+    return PPCAT( THType, _cadd(state, res, t, val, src) );     \
+  }
+
+// res += t by default
+#define THC_DIV(THType, CPPType)                                        \
+  template<>                                                            \
+  void div(THCState* state, THType* res, THType* t, CPPType val) {      \
+    return PPCAT( THType, _div(state, res, t, val) );                   \
+  }
+
+#define THC_STORAGE_RETAIN(THStorageType)                        \
+  template<> void retain(THCState* state, THStorageType* t)      \
+  { return PPCAT( THStorageType, _retain(state, t) ); }
+
+#define THC_STORAGE_FREE(THStorageType)                        \
+  template<> void free(THCState* state, THStorageType* t)      \
+  { return PPCAT( THStorageType, _free(state, t) ); }
+
+
+namespace torch { namespace thc {
+
+#define CPP_TYPE uint8_t
+#define CUTORCH_TENSOR_TYPE THCudaByteTensor
+#define CUTORCH_STORAGE_TYPE THCudaByteStorage
+#include "cutorch_type_wrappers.cpp.in"
+#undef CPP_TYPE
+#undef CUTORCH_TENSOR_TYPE
+#undef CUTORCH_STORAGE_TYPE
+
+#define CPP_TYPE char
+#define CUTORCH_TENSOR_TYPE THCudaCharTensor
+#define CUTORCH_STORAGE_TYPE THCudaCharStorage
+#include "cutorch_type_wrappers.cpp.in"
+#undef CPP_TYPE
+#undef CUTORCH_TENSOR_TYPE
+#undef CUTORCH_STORAGE_TYPE
+
+#define CPP_TYPE short
+#define CUTORCH_TENSOR_TYPE THCudaShortTensor
+#define CUTORCH_STORAGE_TYPE THCudaShortStorage
+#include "cutorch_type_wrappers.cpp.in"
+#undef CPP_TYPE
+#undef CUTORCH_TENSOR_TYPE
+#undef CUTORCH_STORAGE_TYPE
+
+#define CPP_TYPE int
+#define CUTORCH_TENSOR_TYPE THCudaIntTensor
+#define CUTORCH_STORAGE_TYPE THCudaIntStorage
+#include "cutorch_type_wrappers.cpp.in"
+#undef CPP_TYPE
+#undef CUTORCH_TENSOR_TYPE
+#undef CUTORCH_STORAGE_TYPE
+
+#define CPP_TYPE long
+#define CUTORCH_TENSOR_TYPE THCudaLongTensor
+#define CUTORCH_STORAGE_TYPE THCudaLongStorage
+#include "cutorch_type_wrappers.cpp.in"
+#undef CPP_TYPE
+#undef CUTORCH_TENSOR_TYPE
+#undef CUTORCH_STORAGE_TYPE
+
+#define CPP_TYPE float
+// NOT CudaFloatTensor for backwards compatibility .. sigh
+#define CUTORCH_TENSOR_TYPE THCudaTensor
+#define CUTORCH_STORAGE_TYPE THCudaStorage
+#include "cutorch_type_wrappers.cpp.in"
+#undef CPP_TYPE
+#undef CUTORCH_TENSOR_TYPE
+#undef CUTORCH_STORAGE_TYPE
+
+#define CPP_TYPE double
+#define CUTORCH_TENSOR_TYPE THCudaDoubleTensor
+#define CUTORCH_STORAGE_TYPE THCudaDoubleStorage
+#include "cutorch_type_wrappers.cpp.in"
+#undef CPP_TYPE
+#undef CUTORCH_TENSOR_TYPE
+#undef CUTORCH_STORAGE_TYPE
+
+}} // ns torch
