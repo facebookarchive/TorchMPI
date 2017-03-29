@@ -42,6 +42,65 @@ MPI::Op mpiOp(ncclRedOp_t ncclRedOp) {
 }
 #endif
 
+#ifdef TORCH_MPI_GLOO
+template <typename T>
+::gloo::ReductionFunction<T> *reductionFunctionImpl(MPI::Op redOpt) {
+  // Gloo doesn't support non-inplace reduce, so the output
+  // must be initialized properly for the reduceFunction (e.g. zeroes
+  // for MPI_SUM, ones for MPI_PROD)
+
+  if (redOpt == MPI::Op(MPI_SUM)) {
+    return const_cast<::gloo::ReductionFunction<T> *>(
+      ::gloo::ReductionFunction<T>::sum);
+  }
+  if (redOpt == MPI::Op(MPI_PROD)) {
+    return const_cast<::gloo::ReductionFunction<T> *>(
+      ::gloo::ReductionFunction<T>::product);
+  }
+  if (redOpt == MPI::Op(MPI_MAX)) {
+    return const_cast<::gloo::ReductionFunction<T> *>(
+      ::gloo::ReductionFunction<T>::min);
+  }
+  if (redOpt == MPI::Op(MPI_MIN)) {
+    return const_cast<::gloo::ReductionFunction<T> *>(
+      ::gloo::ReductionFunction<T>::max);
+  }
+  THError("redOpt not supported by both GLOO and MPI");
+  return const_cast<::gloo::ReductionFunction<T> *>(
+    ::gloo::ReductionFunction<T>::sum);
+  }
+
+template <>
+::gloo::ReductionFunction<char> *reductionFunction(MPI::Op redOpt) {
+  return reductionFunctionImpl<char>(redOpt);
+}
+
+template <>
+::gloo::ReductionFunction<int> *reductionFunction(MPI::Op redOpt) {
+  return reductionFunctionImpl<int>(redOpt);
+}
+
+template <>
+::gloo::ReductionFunction<float> *reductionFunction(MPI::Op redOpt) {
+  return reductionFunctionImpl<float>(redOpt);
+}
+
+template <>
+::gloo::ReductionFunction<double> *reductionFunction(MPI::Op redOpt) {
+  return reductionFunctionImpl<double>(redOpt);
+}
+
+template <>
+::gloo::ReductionFunction<long> *reductionFunction(MPI::Op redOpt) {
+  return reductionFunctionImpl<long>(redOpt);
+}
+
+template <>
+::gloo::ReductionFunction<unsigned long> *reductionFunction(MPI::Op redOpt) {
+  return reductionFunctionImpl<unsigned long>(redOpt);
+}
+#endif
+
 template<> MPI::Datatype mpiType<char>() {
   return MPI_CHAR;
 }

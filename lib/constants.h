@@ -14,6 +14,10 @@
 #include "nccl.h"
 #endif
 
+#ifdef TORCH_MPI_GLOO
+#include <gloo/common.h>
+#endif
+
 namespace torch { namespace mpi { namespace constants {
 
 template<typename T> MPI::Datatype mpiType();
@@ -21,6 +25,11 @@ template<typename T> MPI::Datatype mpiType();
 #ifdef TORCH_MPI_NCCL
 template<typename T> ncclDataType_t ncclType();
 MPI::Op mpiOp(ncclRedOp_t ncclRedOp);
+#endif
+
+#ifdef TORCH_MPI_GLOO
+template<typename T>
+::gloo::ReductionFunction<T> *reductionFunction(MPI::Op redOpt);
 #endif
 
 extern bool immutableConstants;

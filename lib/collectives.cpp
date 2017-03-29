@@ -399,27 +399,12 @@ namespace gloo { namespace th {
   }
 
   template<typename ScalarType>
-  using ReduceFunction = typename ::gloo::Allreduce<ScalarType>::ReduceFunction;
-
-  template <typename ScalarType>
-  ReduceFunction<ScalarType> *reduceFunction(MPI::Op redOpt) {
-    // Gloo doesn't support non-inplace reduce, so the output
-    // must be initialized properly for the reduceFunction (e.g. zeroes
-    // for MPI_SUM, ones for MPI_PROD)
-    if (redOpt != MPI::Op(MPI_SUM)) {
-      THError("Only MPI_SUM supported by Gloo and MPI");
-    }
-    // MPI_SUM is used if nullptr passed in
-    return nullptr;
-  }
-
-  template<typename ScalarType>
   void allreduceImpl(ScalarType* input,
                      ScalarType* output,
                      size_t nElement,
                      MPI::Op mpiRedOp,
                      const shared_ptr<::gloo::mpi::Context>& context) {
-    auto redFn = reduceFunction<ScalarType>(mpiRedOp);
+    auto redFn = mpi::constants::reductionFunction<ScalarType>(mpiRedOp);
     std::vector<ScalarType *> v = { input };
 
     if (nElement <= mpi::constants::kSmallAllreduceSizeCPU) {
