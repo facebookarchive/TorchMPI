@@ -113,6 +113,11 @@ void sendreceive(THCState* state,
                  int src,
                  int dst);
 
+template<typename ScalarType, typename THTensorType>
+void allgather(THCState* state,
+               THTensorType *t,
+               THTensorType* output);
+
 }}}
 
 #endif

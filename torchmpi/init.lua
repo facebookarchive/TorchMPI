@@ -162,6 +162,11 @@ MPI.sendreceiveTensor = function(input, src, dst)
    return MPI.syncHandle(wrap.executeMPICFun(fun, input, src, dst))
 end
 
+MPI.allgatherTensor = function(input, output)
+   local fun = 'torchmpi_allgather_TH'..torch.type(input):gsub('torch.', '')
+   return MPI.syncHandle(wrap.executeMPICFun2(fun, input, output))
+end
+
 --------------------- Asynchronous collectives CPU or GPU ----------------------
 
 MPI.syncHandle = function(handle)
@@ -464,12 +469,14 @@ configureCollectiveSelector = function()
                broadcastTensor = MPI.broadcastTensor or (MPI.gloo and MPI.gloo.broadcastTensor),
                reduceTensor = MPI.reduceTensor,
                sendreceiveTensor = MPI.sendreceiveTensor,
+               allgatherTensor = MPI.allgatherTensor,
             },
             async = {
                allreduceTensor = MPI.async.p2p.allreduceTensor or (MPI.gloo and MPI.async.gloo.allreduceTensor),
                broadcastTensor = MPI.async.broadcastTensor or (MPI.gloo and MPI.async.gloo.broadcastTensor),
                reduceTensor = MPI.reduceTensor,           -- OpenMPI-1.8  async version seems bugged ??
                sendreceiveTensor = MPI.sendreceiveTensor, -- no async version
+               allgatherTensor = MPI.allgatherTensor,
             },
          },
          multinode = {
@@ -478,12 +485,14 @@ configureCollectiveSelector = function()
                broadcastTensor = MPI.broadcastTensor or (MPI.gloo and MPI.gloo.broadcastTensor),
                reduceTensor = MPI.reduceTensor,
                sendreceiveTensor = MPI.sendreceiveTensor,
+               allgatherTensor = MPI.allgatherTensor,
             },
             async = {
                allreduceTensor = MPI.async.p2p.allreduceTensor or (MPI.gloo and MPI.async.gloo.allreduceTensor),
                broadcastTensor = MPI.async.broadcastTensor or (MPI.gloo and MPI.gloo.broadcastTensor),
                reduceTensor = MPI.reduceTensor,           -- OpenMPI-1.8 async version seems bugged ??
                sendreceiveTensor = MPI.sendreceiveTensor, -- no async version
+               allgatherTensor = MPI.allgatherTensor,
             },
          },
       },
@@ -502,6 +511,7 @@ configureCollectiveSelector = function()
                   or (MPI.hasGlooCuda and MPI.gloo and MPI.gloo.broadcastTensor),
                reduceTensor = MPI.nccl and MPI.nccl.reduceTensor or MPI.reduceTensor,
                sendreceiveTensor = MPI.sendreceiveTensor,
+               allgatherTensor = MPI.allgatherTensor,
             },
             async = {
                allreduceTensor = MPI.ipcGroups and MPI.async.p2p.allreduceTensor
@@ -514,6 +524,7 @@ configureCollectiveSelector = function()
                   or (MPI.hasGlooCuda and MPI.gloo and MPI.async.gloo.broadcastTensor),
                reduceTensor = MPI.nccl and MPI.async.nccl.reduceTensor or MPI.reduceTensor, -- OpenMPI-1.8 async version seems bugged ??
                sendreceiveTensor = MPI.sendreceiveTensor, -- no async version
+               allgatherTensor = MPI.allgatherTensor,
             },
          },
          multinode = {
@@ -525,6 +536,7 @@ configureCollectiveSelector = function()
                broadcastTensor = MPI.broadcastTensor or (MPI.gloo and MPI.gloo.broadcastTensor),
                reduceTensor = MPI.reduceTensor,
                sendreceiveTensor = MPI.sendreceiveTensor,
+               allgatherTensor = MPI.allgatherTensor,
             },
             async = {
                allreduceTensor = MPI.ipcGroups and MPI.async.p2p.allreduceTensor
@@ -535,6 +547,7 @@ configureCollectiveSelector = function()
                    or (MPI.hasGlooCuda and MPI.gloo and MPI.async.gloo.broadcastTensor),
                reduceTensor = MPI.reduceTensor,           -- OpenMPI-1.8 async version seems bugged ??
                sendreceiveTensor = MPI.sendreceiveTensor, -- no async version
+               allgatherTensor = MPI.allgatherTensor,
             },
          },
       },
@@ -563,7 +576,7 @@ function MPI.collectiveAvailability(cpu, gpu)
          for _, nccl in ipairs({false, true}) do
             for _, gloo in ipairs(nccl and {false} or {false, true}) do
                for _, p2p in ipairs(gloo and {false} or {false, true}) do
-                  for _, collective in ipairs({"broadcast", "reduce", "allreduce", "sendreceive"}) do
+                  for _, collective in ipairs({"broadcast", "reduce", "allreduce", "sendreceive", "allgather"}) do
                      if gpu or not nccl then -- cpu + nccl not valid
                         local funcname = "MPI" .. (async and ".async" or "")
                             .. (nccl and ".nccl" or "" ) .. (gloo and ".gloo" or "")
@@ -617,11 +630,12 @@ MPI.collectiveSelectorToString = function(cpuSel, nodeSel, asyncSel, collSel)
    assert(not cpuSel or cpuSel == 'cpu' or cpuSel == 'gpu', 'Invalid cpuSelector string ' .. tostring(cpuSel))
    assert(not nodeSel or nodeSel == 'singlenode' or nodeSel == 'multinode', 'Invalid nodeSelector string ' .. tostring(nodeSel))
    assert(not asyncSel or asyncSel == 'sync' or asyncSel == 'async', 'Invalid asyncSelector string ' .. tostring(asyncSel))
-   assert(not collSel or collSel == 'allreduceTensor' or collSel == 'broadcastTensor' or collSel == 'reduceTensor' or collSel == 'sendreceiveTensor',
+   assert(not collSel or collSel == 'allreduceTensor' or collSel == 'broadcastTensor'
+          or collSel == 'reduceTensor' or collSel == 'sendreceiveTensor' or collSel == 'allgatherTensor',
           'Invalid collectiveSelector string ' .. tostring(collSel))
    local str = ''
    local fun2string = {}
-   for _, coll in ipairs({'allreduceTensor', 'broadcastTensor', 'reduceTensor', 'sendreceiveTensor'}) do
+   for _, coll in ipairs({'allreduceTensor', 'broadcastTensor', 'reduceTensor', 'sendreceiveTensor', 'allgatherTensor'}) do
       fun2string[MPI[coll]] = 'MPI.'..coll
       if MPI.async[coll] then fun2string[MPI.async[coll]] = 'MPI.async.'..coll end
       if MPI.nccl then
@@ -634,7 +648,7 @@ MPI.collectiveSelectorToString = function(cpuSel, nodeSel, asyncSel, collSel)
    for _, c in ipairs(cpuSel and {cpuSel} or {'cpu', 'gpu'}) do
       for _, s in ipairs(nodeSel and {nodeSel} or {'singlenode', 'multinode'}) do
          for _, a in ipairs(asyncSel and {asyncSel} or {'sync', 'async'}) do
-            for _, coll in ipairs(collSel and {collSel} or {'allreduceTensor', 'broadcastTensor', 'reduceTensor', 'sendreceiveTensor'}) do
+            for _, coll in ipairs(collSel and {collSel} or {'allreduceTensor', 'broadcastTensor', 'reduceTensor', 'sendreceiveTensor', 'allgatherTensor'}) do
                local base = ('%s.%s.%s.%s'):format(c, s, a, coll)
                str = str .. ('MPI.collectiveSelector.%-40s \t->\t %s\n'):format(
                   base, fun2string[MPI.collectiveSelector[c][s][a][coll]])

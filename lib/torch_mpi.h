@@ -104,11 +104,14 @@ namespace th {
 
 // Minimal set of TH operations needed for collectives and parameterserver
 template<typename Scalar, class THType> Scalar* data(THType* t);
-
+template<class THType> long stride(const THType *t, int dim);
 template<class THType> bool isContiguous(const THType* t);
 template<class THType> long nElement(const THType* t);
+template<class THType> THLongStorage* newSizeOf(THType *t);
 template<class THType> THType* newWithTensor(THType* t);
 template<class THType> void resize1d(THType* t, long nElement);
+template<class THType> void resizeNd(THType *t, int nDimension,
+                                     long *size, long *stride);
 template<class THType> THType* newClone(THType* t);
 template<class THType> void free(THType* t);
 template<class THType> void retain(THType* t);

@@ -59,11 +59,14 @@ namespace thc {
 // Minimal set of THC operations needed for collectives and parameterserver
 template<typename Scalar, class THType>
 Scalar* data(THCState* state, THType* t);
-
+template<class THType> long stride(THCState* state, const THType *t, int dim);
 template<class THType> bool isContiguous(THCState* state, const THType* t);
 template<class THType> long nElement(THCState* state, const THType* t);
 template<class THType> THType* newWithTensor(THCState* state, THType* t);
+template<class THType> THLongStorage* newSizeOf(THCState* state, THType *t);
 template<class THType> void resize1d(THCState* state, THType* t, long nElement);
+template<class THType> void resizeNd(THCState* state, THType *t, int nDimension,
+                                     long *size, long *stride);
 template<class THType> THType* newClone(THCState* state, THType* t);
 template<class THType> void free(THCState* state, THType* t);
 template<class THType> void retain(THCState* state, THType* t);

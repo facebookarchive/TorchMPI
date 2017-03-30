@@ -11,7 +11,7 @@ local ffi = require("ffi")
 local types = require("torchmpi.types")
 
 local function declMPI(withCuda)
-   local allreduce_def, broadcast_def, reduce_def, sendreceive_def, parameterserver_def = "", "", "", "", ""
+   local allreduce_def, broadcast_def, reduce_def, sendreceive_def, allgather_def, parameterserver_def = "", "", "", "", "", ""
    for _, v in pairs(types.torch) do
       allreduce_def = allreduce_def .. [[
          void torchmpi_allreduce_TH]] .. v .. [[Tensor(TH]] .. v .. [[Tensor* input, TH]] .. v .. [[Tensor* output);
@@ -31,6 +31,9 @@ local function declMPI(withCuda)
       ]]
       sendreceive_def = sendreceive_def .. [[
          void torchmpi_sendreceive_TH]] .. v .. [[Tensor(TH]] .. v .. [[Tensor* input, int src, int dst);
+      ]]
+      allgather_def = allgather_def .. [[
+         void torchmpi_allgather_TH]] .. v .. [[Tensor(TH]] .. v .. [[Tensor* input, TH]] .. v .. [[Tensor* output);
       ]]
       parameterserver_def = parameterserver_def .. [[
          void* torchmpi_parameterserver_init_TH]] .. v .. [[Tensor(TH]] .. v .. [[Tensor* input);
@@ -143,10 +146,14 @@ local function declMPI(withCuda)
             void torchmpi_sendreceive_THCuda]] .. v .. [[Tensor]] ..
                [[(THCState* state, THCuda]] .. v .. [[Tensor* input, int src, int dst);
          ]]
+         allgather_def = allgather_def .. [[
+            void torchmpi_allgather_THCuda]] .. v .. [[Tensor]] ..
+               [[(THCState* state, THCuda]] .. v .. [[Tensor* input, THCuda]] .. v .. [[Tensor* output);
+         ]]
       end
    end
 
-   def = def .. allreduce_def .. broadcast_def .. reduce_def .. sendreceive_def .. parameterserver_def ..
+   def = def .. allreduce_def .. broadcast_def .. reduce_def .. sendreceive_def .. allgather_def .. parameterserver_def ..
       allreduce_scalar_def .. broadcast_scalar_def .. reduce_scalar_def .. sendreceive_scalar_def ..
    [[
       void torchmpi_start();

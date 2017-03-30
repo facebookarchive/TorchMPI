@@ -72,18 +72,19 @@ namespace th {
   const CollectiveResources* r = acquireCollectiveResources(            \
     tensorData, Spin(true));
 
-#define PREPARE2(input, output)                                        \
+#define PREPARE2(input, output, retainOutput)                           \
   if (!isContiguous(input)) {                                           \
     THError("NYI: MPI_Bcast only supported for contig tensors");        \
   }                                                                     \
                                                                         \
   retainStorage(input);                                                 \
-  if (input != output) {                                                \
+  if (input != output && retainOutput) {                                \
     retainStorage(output);                                              \
   }                                                                     \
   auto inputData = data<ScalarType>(input);                             \
   auto outputData = (output) ? data<ScalarType>(output) : inputData;    \
   auto nElement = torch::th::nElement<THTensorType>(input);             \
+  auto nElementOutput = torch::th::nElement<THTensorType>(output);      \
   auto collectiveLevel = torch::mpi::getCollectiveSpan().first;         \
   CommunicatorGuard cs(collectiveLevel);                                \
   const CollectiveResources* r = acquireCollectiveResources(            \
@@ -101,7 +102,7 @@ namespace th {
   const CollectiveResources* r = acquireCollectiveResources(            \
     tensorData, Spin(true), WithNCCLComm(false), WithGlooContext(true));
 
-#define PREPARE2_GLOO(input, output)                                    \
+#define PREPARE2_GLOO(input, output, retainOutput)                      \
   if (!isContiguous(input)) {                                           \
     THError("NYI: GLOO only supported for contig tensors");             \
   }                                                                     \
@@ -160,7 +161,7 @@ namespace th {
               int dst,
               MPI::Op mpiRedOp)
   {
-    PREPARE2(input, output);
+    PREPARE2(input, output, true);
 
     if (outputData == inputData) {
       r->comm->intraComm.Reduce(
@@ -202,9 +203,87 @@ namespace th {
   void allreduce(THTensorType* input,
                  THTensorType* output,
                  MPI::Op mpiRedOp) {
-    PREPARE2(input, output);
+    PREPARE2(input, output, true);
 
     allreduceImpl(inputData, outputData, nElement, mpiRedOp, r);
+
+    // TODO: ScopeGuard
+    releaseCollectiveResources(const_cast<CollectiveResources*>(r));
+  }
+
+  template<typename ScalarType>
+  void allgatherImpl(ScalarType* input,
+                     std::vector<ScalarType>& output,
+                     size_t nElement,
+                     const CollectiveResources* r) {
+    r->comm->intraComm.Allgather(
+      input,
+      nElement,
+      mpiType<ScalarType>(),
+      output.data(),
+      nElement,
+      mpiType<ScalarType>());
+  }
+
+  template<typename ScalarType>
+  void allgathervImpl(ScalarType* input,
+                      ScalarType* output,
+                      size_t nElement,
+                      const std::vector<int>& counts,
+                      const std::vector<int>& displacements,
+                      const CollectiveResources* r) {
+    r->comm->intraComm.Allgatherv(
+      input,
+      nElement,
+      mpiType<ScalarType>(),
+      output,
+      counts.data(),
+      displacements.data(),
+      mpiType<ScalarType>());
+  }
+
+  template<typename ScalarType, typename THTensorType>
+  void allgather(THTensorType* input,
+                 THTensorType* output) {
+    if (input == output) {
+      THError("inplace not supported for allgather");
+    }
+    PREPARE2(input, output, false);
+
+    auto size = commSize(r->comm->intraComm);
+    std::vector<int> counts(size);
+
+    // allgatherv takes int-typed counts / displacements
+    int nElementInt = (int)nElement;
+    allgatherImpl<int>(&nElementInt, counts, 1, r);
+
+    std::vector<int> displacements(size);
+    displacements[0] = 0;
+    for (int i = 1; i < size; ++i) {
+      displacements[i] = counts[i-1] + displacements[i-1];
+    }
+    int outputSizeNeeded = displacements[size - 1] + counts[size - 1];
+    if (outputSizeNeeded > nElementOutput) {
+      THLongStorage *storageCopy = newSizeOf<THTensorType>(output);
+
+      long outerStride = stride<THTensorType>(output, 0);
+      if ( (outputSizeNeeded % outerStride) != 0 ) {
+        THError("Size mismatch: assuming tensor gathered along last dimension, "
+                "but outer stride of %d doesn't divide total size of %d\n",
+                outerStride, outputSizeNeeded);
+      }
+      storageCopy->data[output->nDimension - 1] = outputSizeNeeded / outerStride;
+      // TODO: creating a new tensor would be more efficient if we can't fit
+      // realloc, but changes API since we would need to return new tensor.
+      resizeNd(output, storageCopy->size, storageCopy->data, NULL);
+      outputData = data<ScalarType>(output);
+
+      THLongStorage_free(storageCopy);
+    }
+    if (input != output) {
+      retainStorage(output);
+    }
+    allgathervImpl<ScalarType>(inputData, outputData, nElement, counts, displacements, r);
 
     // TODO: ScopeGuard
     releaseCollectiveResources(const_cast<CollectiveResources*>(r));
@@ -230,7 +309,7 @@ namespace th {
   void allreducep2p(THTensorType* input,
                     THTensorType* output,
                     MPI::Op mpiRedOp) {
-    PREPARE2(input, output);
+    PREPARE2(input, output, true);
 
     if (nElement <= constants::kSmallAllreduceSizeCPU) {
       // Go through CPU
@@ -294,7 +373,7 @@ namespace th {
                                      int dst,
                                      MPI::Op mpiRedOp)
   {
-    PREPARE2(input, output);
+    PREPARE2(input, output, true);
 
     MPI_Request req;
     if (outputData == inputData) {
@@ -331,7 +410,7 @@ namespace th {
                                         THTensorType* output,
                                         MPI::Op mpiRedOp)
   {
-    PREPARE2(input, output);
+    PREPARE2(input, output, true);
 
     MPI_Request req;
     MPI_Iallreduce(
@@ -356,7 +435,7 @@ namespace th {
     THTensorType* output,
     MPI::Op mpiRedOp)
   {
-    PREPARE2(input, output);
+    PREPARE2(input, output, true);
 
     auto& futures = getCollectiveFutures();
     futures.push_back(
@@ -422,7 +501,7 @@ namespace gloo { namespace th {
   void allreduce(THTensorType* input,
                  THTensorType* output,
                  MPI::Op mpiRedOp) {
-    PREPARE2_GLOO(input, output);
+    PREPARE2_GLOO(input, output, true);
 
     allreduceImpl<ScalarType>(inputData, outputData, nElement, mpiRedOp, r->glooContext);
 
@@ -450,7 +529,7 @@ namespace gloo { namespace th {
   allreduceAsync(THTensorType* input,
                  THTensorType *output,
                  MPI::Op mpiRedOp) {
-    PREPARE2_GLOO(input, output);
+    PREPARE2_GLOO(input, output, true);
 
     auto& futures = getCollectiveFutures();
     futures.push_back(
@@ -621,6 +700,14 @@ SynchronizationHandle* PPCAT(torchmpi_async_p2p_broadcast_, THTensorType)( \
       input, src, dst);                                \
   }
 
+/*********************** Allgather **********************************/
+#define DEFINE_ALLGATHER(ScalarType, THTensorType)              \
+  void PPCAT(torchmpi_allgather_, THTensorType)(                \
+    THTensorType *input, THTensorType *output) {                \
+    torch::mpi::th::allgather<ScalarType, THTensorType>(        \
+      input, output);                                           \
+  }
+
 /**********************************************************************
  ********************** C Wrapper instantiations **********************
  **********************************************************************/
@@ -646,6 +733,7 @@ SynchronizationHandle* PPCAT(torchmpi_async_p2p_broadcast_, THTensorType)( \
   DEFINE_ALLREDUCE(CPP_TYPE, TH_TENSOR_TYPE);                           \
   DEFINE_ALLREDUCEP2P(CPP_TYPE, TH_TENSOR_TYPE);                        \
   DEFINE_SENDRECEIVE(CPP_TYPE, TH_TENSOR_TYPE);                         \
+  DEFINE_ALLGATHER(CPP_TYPE, TH_TENSOR_TYPE);                           \
                                                                         \
   DEFINE_BROADCAST_ASYNC(CPP_TYPE, TH_TENSOR_TYPE);                     \
   DEFINE_BROADCASTP2P_ASYNC(CPP_TYPE, TH_TENSOR_TYPE);                  \

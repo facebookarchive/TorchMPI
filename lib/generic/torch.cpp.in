@@ -19,6 +19,11 @@
   template<> bool isContiguous(const THType* t) \
   { return PPCAT( THType, _isContiguous(t) ); }
 
+#define TH_STRIDE(THType)                            \
+  template<> long stride(const THType *t, int dim) { \
+    return PPCAT( THType, _stride(t, dim) );         \
+  }
+
 #define TH_NELEMENT(THType)                     \
   template<> long nElement(const THType* t)     \
   { return PPCAT( THType, _nElement(t) ); }
@@ -28,9 +33,20 @@
     return PPCAT( THType, _newWithTensor(t) );          \
   }
 
+#define TH_NEWSIZEOF(THType)                            \
+  template<> THLongStorage* newSizeOf(THType *t) {      \
+    return PPCAT( THType, _newSizeOf(t) );              \
+  }
+
 #define TH_RESIZE1D(THType)                             \
   template<> void resize1d(THType* t, long size) {      \
     PPCAT( THType, _resize1d(t, size) );                \
+  }
+
+#define TH_RESIZEND(THType)                                        \
+  template<> void resizeNd(THType *t, int nDimension,              \
+                           long *size, long *stride) {             \
+    PPCAT( THType, _resizeNd(t, nDimension, size, stride) );       \
   }
 
 #define TH_NARROW(THType)                                               \

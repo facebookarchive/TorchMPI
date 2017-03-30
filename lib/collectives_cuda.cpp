@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <iostream>
 #include <unordered_map>
+#include <vector>
 
 #include "resources.h"
 
@@ -83,13 +84,13 @@ namespace torch { namespace mpi { namespace thc {
   auto hasIntra = getMainThreadCommunicator().hasIntraCollective();     \
   auto hasInter = getMainThreadCommunicator().hasInterCollective();
 
-#define PREPARE2(state, input, output)                                  \
+#define PREPARE2(state, input, output, retainOutput)                    \
   THCudaCheck(cudaGetLastError());                                      \
   if (!torch::thc::isContiguous(state, input)) {                        \
     THError("NYI: Collective only supported for contig tensors");       \
   }                                                                     \
   torch::mpi::thc::retainStorage(state, input);                         \
-  if (input != output) {                                                \
+  if (input != output && retainOutput) {                                \
     torch::mpi::thc::retainStorage(state, output);                      \
   }                                                                     \
   int device;                                                           \
@@ -99,13 +100,14 @@ namespace torch { namespace mpi { namespace thc {
   auto outputData = (output) ?                                          \
     torch::thc::data<ScalarType>(state, output) : inputData;            \
   auto nElement = torch::thc::nElement<THTensorType>(state, input);     \
+  auto nElementOutput = torch::thc::nElement<THTensorType>(state, output); \
   auto collectiveLevel = getCollectiveSpan().first;                     \
   CommunicatorGuard cs(collectiveLevel);                                \
   const CollectiveResourcesCuda* rOuter = acquireCollectiveResourcesCuda( \
     inputData, Spin(true));
 
-#define PREPARE2_NCCL(state, input, output)                             \
-  PREPARE2(state, input, output);                                       \
+#define PREPARE2_NCCL(state, input, output, retainOutput)               \
+  PREPARE2(state, input, output, retainOutput);                         \
   CommunicatorGuard csInner(getCollectiveSpan().second);                \
   const CollectiveResourcesCuda* rInner =                               \
     acquireCollectiveResourcesCuda(inputData,                           \
@@ -114,11 +116,11 @@ namespace torch { namespace mpi { namespace thc {
   auto hasIntra = getMainThreadCommunicator().hasIntraCollective();     \
   auto hasInter = getMainThreadCommunicator().hasInterCollective();
 
-#define PREPARE2_GLOO(state, input, output)                             \
+#define PREPARE2_GLOO(state, input, output, retainOutput)               \
   if (input != output) {                                                \
     THError("GLOO only supports inplace collectives");                  \
   }                                                                     \
-  PREPARE2(state, input, output);                                       \
+  PREPARE2(state, input, output, retainOutput);                         \
   CommunicatorGuard csInner(getCollectiveSpan().second);                \
   const CollectiveResourcesCuda* rInner =                               \
     acquireCollectiveResourcesCuda(inputData,                           \
@@ -128,8 +130,8 @@ namespace torch { namespace mpi { namespace thc {
   auto hasIntra = getMainThreadCommunicator().hasIntraCollective();     \
   auto hasInter = getMainThreadCommunicator().hasInterCollective();
 
-#define PREPARE2_IPC(state, input, output)                              \
-  PREPARE2(state, input, output);                                       \
+#define PREPARE2_IPC(state, input, output, retainOutput)                \
+  PREPARE2(state, input, output, retainOutput);                         \
   CommunicatorGuard csInner(getCollectiveSpan().second);                \
   const CollectiveResourcesCuda* rInner = acquireCollectiveResourcesCuda( \
     inputData, Spin(true), WithNCCLComm(false),                         \
@@ -209,6 +211,37 @@ void sendreceive(THCState* state, THTensorType* tensor, int src, int dst) {
   THCudaCheck(cudaGetLastError());
 }
 
+template<typename ScalarType>
+void allgather(ScalarType* input,
+               std::vector<ScalarType>& output,
+               size_t nElement,
+               const CollectiveResourcesCuda* r) {
+    r->comm->intraComm.Allgather(
+      input,
+      nElement,
+      mpiType<ScalarType>(),
+      output.data(),
+      nElement,
+      mpiType<ScalarType>());
+  }
+
+template<typename ScalarType>
+void allgatherv(ScalarType* input,
+                ScalarType* output,
+                size_t nElement,
+                const std::vector<int>& counts,
+                const std::vector<int>& displacements,
+                const CollectiveResourcesCuda* r) {
+  r->comm->intraComm.Allgatherv(
+    input,
+    nElement,
+    mpiType<ScalarType>(),
+    output,
+    counts.data(),
+    displacements.data(),
+    mpiType<ScalarType>());
+}
+
 template<typename ScalarType, typename THTensorType>
 void broadcast(THCState* state,
                THTensorType* tensor,
@@ -231,7 +264,7 @@ void reduce(THCState* state,
             int root,
             MPI::Op mpiRedOp)
 {
-  PREPARE2(state, input, output);
+  PREPARE2(state, input, output, true);
 
   if (outputData == inputData) {
     rOuter->comm->intraComm.Reduce(
@@ -263,9 +296,62 @@ void allreduce(THCState* state,
                THTensorType* output,
                MPI::Op mpiRedOp)
 {
-  PREPARE2(state, input, output);
+  PREPARE2(state, input, output, true);
 
   allreduce(inputData, outputData, nElement, mpiRedOp, rOuter);
+
+  // TODO: ScopeGuard
+  releaseCollectiveResources(const_cast<CollectiveResourcesCuda*>(rOuter));
+
+  THCudaCheck(cudaGetLastError());
+}
+
+template<typename ScalarType, typename THTensorType>
+void allgather(THCState* state,
+               THTensorType* input,
+               THTensorType* output)
+{
+  if (input == output) {
+    THError("inplace not supported for allgather");
+  }
+  PREPARE2(state, input, output, false);
+
+  auto size = commSize(rOuter->comm->intraComm);
+  std::vector<int> counts(size);
+
+  // allgatherv takes int-typed counts / displacements
+  int nElementInt = (int)nElement;
+  allgather<int>(&nElementInt, counts, 1, rOuter);
+
+  std::vector<int> displacements(size);
+  displacements[0] = 0;
+  for (int i = 1; i < size; ++i) {
+    displacements[i] = counts[i-1] + displacements[i-1];
+  }
+  int outputSizeNeeded = displacements[size - 1] + counts[size - 1];
+  if (outputSizeNeeded > nElementOutput) {
+    THLongStorage *storageCopy = torch::thc::newSizeOf<THTensorType>(state, output);
+
+    long outerStride = torch::thc::stride<THTensorType>(state, output, 0);
+    if ( (outputSizeNeeded % outerStride) != 0 ) {
+      THError("Size mismatch: assuming tensor gathered along last dimension, "
+              "but outer stride of %d doesn't divide total size of %d\n",
+              outerStride, outputSizeNeeded);
+    }
+    storageCopy->data[output->nDimension - 1] = outputSizeNeeded / outerStride;
+    // TODO: creating a new tensor would be more efficient if we can't fit
+    // realloc, but changes API since we would need to return new tensor.
+    torch::thc::resizeNd(state, output, storageCopy->size,
+                         storageCopy->data, NULL);
+    outputData = torch::thc::data<ScalarType>(state, output);
+
+    THLongStorage_free(storageCopy);
+  }
+  if (input != output) {
+    torch::mpi::thc::retainStorage(state, output);
+  }
+  allgatherv<ScalarType>(inputData, outputData, nElement,
+                         counts, displacements, rOuter);
 
   // TODO: ScopeGuard
   releaseCollectiveResources(const_cast<CollectiveResourcesCuda*>(rOuter));
@@ -500,7 +586,7 @@ void allreducep2pHierarchical(THCState* state,
                               THTensorType* output,
                               MPI::Op mpiRedOp)
 {
-  PREPARE2_IPC(state, input, output);
+  PREPARE2_IPC(state, input, output, true);
 
   auto sh = allreducep2pHierarchicalImpl(inputData,
                                          outputData,
@@ -526,7 +612,7 @@ void allreducep2pFlat(THCState* state,
                       THTensorType* output,
                       MPI::Op mpiRedOp)
 {
-  PREPARE2(state, input, output);
+  PREPARE2(state, input, output, true);
 
   auto hiPriStreams = torch::mpi::thc::preSyncHiPriStreams(stream);
   THAssert(hiPriStreams.size() > 0);
@@ -601,7 +687,7 @@ template<typename ScalarType, typename THTensorType>
 SynchronizationHandle* allreduceAsync(
   THCState* state, THTensorType* input, THTensorType* output, MPI::Op mpiRedOp)
 {
-  PREPARE2(state, input, output);
+  PREPARE2(state, input, output, true);
   auto& futures = getCollectiveFutures();
   futures.push_back(
     collectiveOffloadThreadPool().enqueue([=](){
@@ -686,7 +772,7 @@ template<typename ScalarType, typename THTensorType>
 SynchronizationHandle* allreducep2pAsyncHierarchical(
   THCState* state, THTensorType* input, THTensorType* output, MPI::Op mpiRedOp)
 {
-  PREPARE2_IPC(state, input, output);
+  PREPARE2_IPC(state, input, output, true);
 
   auto& futures = getCollectiveFutures();
   futures.push_back(
@@ -721,7 +807,7 @@ template<typename ScalarType, typename THTensorType>
 SynchronizationHandle* allreducep2pAsyncFlat(
   THCState* state, THTensorType* input, THTensorType* output, MPI::Op mpiRedOp)
 {
-  PREPARE2_IPC(state, input, output);
+  PREPARE2_IPC(state, input, output, true);
 
   auto& futures = getCollectiveFutures();
   futures.push_back(
@@ -900,7 +986,7 @@ cudaStream_t reduceImpl(THCState* state,
     }
   }
 
-  PREPARE2_NCCL(state, input, output);
+  PREPARE2_NCCL(state, input, output, true);
   if (hasInter) {
     // Release before calling!
     // TODO: ScopeGuard
@@ -974,7 +1060,7 @@ SynchronizationHandle* allreduceImpl(THCState* state,
                                      THTensorType* output,
                                      ncclRedOp_t ncclRedOp)
 {
-  PREPARE2_NCCL(state, input, output);
+  PREPARE2_NCCL(state, input, output, true);
 
   // Case 1. Intra only
   if (!hasInter) {
@@ -1166,7 +1252,7 @@ SynchronizationHandle* allreduceImpl(THCState* state,
                                      THTensorType* output,
                                      MPI::Op mpiRedOp)
 {
-  PREPARE2_GLOO(state, input, output);
+  PREPARE2_GLOO(state, input, output, true);
 
   // TODO: use high priority streams?
   auto res = synchronizationHandleFromStream(
@@ -1395,6 +1481,17 @@ extern "C" {
       state, input, src, dst);                                          \
   }
 
+/*********************** Allgather **********************************/
+#define DEFINE_ALLGATHER(ScalarType, THCTensorType)                     \
+  void PPCAT(torchmpi_allgather_, THCTensorType)(                       \
+    THCState* state, THCTensorType *input, THCTensorType *output) {     \
+    struct cudaPointerAttributes attributes;                            \
+    THCudaCheck(cudaPointerGetAttributes(&attributes,                   \
+      torch::thc::data<ScalarType, THCTensorType>(state, input)));      \
+    torch::mpi::thc::allgather<ScalarType, THCTensorType>(              \
+      state, input, output);                                            \
+  }
+
 /**********************************************************************
  ********************** C Wrapper instantiations **********************
  **********************************************************************/
@@ -1409,7 +1506,8 @@ extern "C" {
   DEFINE_ALLREDUCE_ASYNC(CPP_TYPE, THC_TENSOR_TYPE);    \
   DEFINE_ALLREDUCEP2P(CPP_TYPE, THC_TENSOR_TYPE);       \
   DEFINE_ALLREDUCEP2P_ASYNC(CPP_TYPE, THC_TENSOR_TYPE); \
-  DEFINE_SENDRECEIVE(CPP_TYPE, THC_TENSOR_TYPE);
+  DEFINE_SENDRECEIVE(CPP_TYPE, THC_TENSOR_TYPE);        \
+  DEFINE_ALLGATHER(CPP_TYPE, THC_TENSOR_TYPE);
 
 #ifdef TORCH_MPI_NCCL
 #define DEFINE_NCCL_FUNCTIONS(CPP_TYPE, THC_TENSOR_TYPE)        \

@@ -19,6 +19,11 @@
   template<> bool isContiguous(THCState* state, const THType* t)        \
   { return PPCAT( THType, _isContiguous(state, t) ); }
 
+#define THC_STRIDE(THType)                                              \
+  template<> long stride(THCState *state, const THType *t, int dim) {   \
+    return PPCAT( THType, _stride(state, t, dim) );                     \
+  }
+
 #define THC_NELEMENT(THType)                                    \
   template<> long nElement(THCState* state, const THType* t)    \
   { return PPCAT( THType, _nElement(state, t) ); }
@@ -28,9 +33,20 @@
     return PPCAT( THType, _newWithTensor(state, t) );                   \
   }
 
+#define THC_NEWSIZEOF(THType)                                           \
+  template<> THLongStorage* newSizeOf(THCState* state,THType *t) {      \
+    return PPCAT( THType, _newSizeOf(state, t) );                       \
+  }
+
 #define THC_RESIZE1D(THType)                                            \
   template<> void resize1d(THCState* state, THType* t, long size) {     \
     PPCAT( THType, _resize1d(state, t, size) );                         \
+  }
+
+#define THC_RESIZEND(THType)                                            \
+  template<> void resizeNd(THCState *state, THType *t, int nDimension,  \
+                           long *size, long *stride) {                  \
+    PPCAT( THType, _resizeNd(state, t, nDimension, size, stride) );     \
   }
 
 #define THC_NARROW(THType)						\

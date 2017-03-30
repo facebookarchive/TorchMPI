@@ -23,10 +23,17 @@ tester.runOneConfig = function(tests, nRuns, nSkip, config, printDebug)
 
          local pre = config.gpu and cutorch.getMemoryUsage() or nil
          local size = 2 ^ i + math.floor(math.random(128)) -- give it some kick
-         local input = config.gpu and torch.CudaTensor(size) or torch.FloatTensor(size)
 
-         input:fill(mpi.rank())
-         local output = config.inPlace and input or input:clone():normal()
+         local input
+         local output
+         if not T.generate then
+            input = config.gpu and torch.CudaTensor(size) or torch.FloatTensor(size)
+            input:fill(mpi.rank())
+
+            output = config.inPlace and input or input:clone():normal()
+         else
+            input, output = T.generate(size)
+         end
 
          local timer = torch.Timer()
          timer:stop()

@@ -11,11 +11,22 @@ These implementations come in direct MPI_Isend / MPI_Irecv, staged via CPU and c
 Depending on your use case (synchronous or asynchronous, overprovisioned or not, CPU or GPU bound, small or large messages),
 you can switch implementations to get the best performance available.
 
+# Collective contiguity dimensionality
+In general, the input and output tensors passed to the collectives are required to be contiguous and collectives operate
+without respecting dimensionality (much like ```tensor:copy(other)```).  That is, a broadcast of a tensor to other processes
+that have the same number of elements, but different dimensionality will succeed but not resize (reshape) the receiving
+tensors.
+
+The assumptions of ```allgather``` are a bit different (because the output tensor number of elements is potentially unknown):
+the implementation assumes that each process involved in the collective has a contiguous region ordered by rank
+when viewed as a 1-d tensor.  That is, after ```allgather``` has completed, the rank 0 elements (if they exist)
+will precede the rank 1 elements (if they exist), which will precede the rank 2 elements (if they exist), etc.
+
 # Manually calling collectives
 The collectives we expose follow the generic patterns.
 For synchronous collectives: ```torchmpi.[impl.][name.][type]()```, where:
 - impl is either omitted (for the stock mpi implementation), ```nccl```, ```gloo```, or ```p2p```
-- name is either of ```broadcast```, ```reduce```, ```sendreceive``` or ```allreduce```
+- name is either of ```broadcast```, ```reduce```, ```sendreceive```, ```allreduce``` or ```allgather```
 - type is a CPU of GPU Torch tensor type
 
 For asynchronous collectives: ```userdata<SynchronizationHandle*> torchmpi.async.[impl.][name.][type]()```, where:
@@ -41,6 +52,7 @@ The collectives described above all follow the same API outlined here. For examp
 ### reduceTensor(number root, tensor input[, tensor output = input])
 ### allreduceTensor(tensor input[, tensor output = input])
 ### sendreceiveTensor(tensor tensor, number src, number dst)
+### allgatherTensor(tensor input, tensor output)
 
 ## Collective availability
 Not every collective specified by the [Manually Calling Collectives](#manually-calling-collectives)
@@ -61,68 +73,84 @@ cpu = {
 	MPI.reduceTensor                    	->	 available
 	MPI.allreduceTensor                 	->	 available
 	MPI.sendreceiveTensor               	->	 available
+	MPI.allgatherTensor                 	->	 available
 	MPI.p2p.broadcastTensor             	->	 available
 	MPI.p2p.reduceTensor                	->	 unimplemented
 	MPI.p2p.allreduceTensor             	->	 available
 	MPI.p2p.sendreceiveTensor           	->	 unimplemented
+	MPI.p2p.allgatherTensor             	->	 unimplemented
 	MPI.gloo.broadcastTensor            	->	 unavailable
 	MPI.gloo.reduceTensor               	->	 unimplemented
 	MPI.gloo.allreduceTensor            	->	 unavailable
 	MPI.gloo.sendreceiveTensor          	->	 unimplemented
+	MPI.gloo.allgatherTensor            	->	 unavailable
 	MPI.async.broadcastTensor           	->	 available
 	MPI.async.reduceTensor              	->	 available
 	MPI.async.allreduceTensor           	->	 available
 	MPI.async.sendreceiveTensor         	->	 unimplemented
+	MPI.async.allgatherTensor           	->	 unimplemented
 	MPI.async.p2p.broadcastTensor       	->	 available
 	MPI.async.p2p.reduceTensor          	->	 available
 	MPI.async.p2p.allreduceTensor       	->	 available
 	MPI.async.p2p.sendreceiveTensor     	->	 unimplemented
+	MPI.async.p2p.allgatherTensor       	->	 unimplemented
 	MPI.async.gloo.broadcastTensor      	->	 unavailable
 	MPI.async.gloo.reduceTensor         	->	 unimplemented
 	MPI.async.gloo.allreduceTensor      	->	 unavailable
 	MPI.async.gloo.sendreceiveTensor    	->	 unimplemented
+	MPI.async.gloo.allgatherTensor      	->	 unavailable
 }
 gpu = {
 	MPI.broadcastTensor                 	->	 available
 	MPI.reduceTensor                    	->	 available
 	MPI.allreduceTensor                 	->	 available
 	MPI.sendreceiveTensor               	->	 available
+	MPI.allgatherTensor                 	->	 available
 	MPI.p2p.broadcastTensor             	->	 available
 	MPI.p2p.reduceTensor                	->	 unimplemented
 	MPI.p2p.allreduceTensor             	->	 available
 	MPI.p2p.sendreceiveTensor           	->	 unimplemented
+	MPI.p2p.allgatherTensor             	->	 unimplemented
 	MPI.gloo.broadcastTensor            	->	 unavailable
 	MPI.gloo.reduceTensor               	->	 unimplemented
 	MPI.gloo.allreduceTensor            	->	 unavailable
 	MPI.gloo.sendreceiveTensor          	->	 unimplemented
+	MPI.gloo.allgatherTensor            	->	 unavailable
 	MPI.nccl.broadcastTensor            	->	 available
 	MPI.nccl.reduceTensor               	->	 available
 	MPI.nccl.allreduceTensor            	->	 available
 	MPI.nccl.sendreceiveTensor          	->	 unimplemented
+	MPI.nccl.allgatherTensor            	->	 unimplemented
 	MPI.nccl.p2p.broadcastTensor        	->	 available
 	MPI.nccl.p2p.reduceTensor           	->	 available
 	MPI.nccl.p2p.allreduceTensor        	->	 available
 	MPI.nccl.p2p.sendreceiveTensor      	->	 unimplemented
+	MPI.nccl.p2p.allgatherTensor        	->	 unimplemented
 	MPI.async.broadcastTensor           	->	 available
 	MPI.async.reduceTensor              	->	 unimplemented
 	MPI.async.allreduceTensor           	->	 available
 	MPI.async.sendreceiveTensor         	->	 unimplemented
+	MPI.async.allgatherTensor           	->	 unimplemented
 	MPI.async.p2p.broadcastTensor       	->	 available
 	MPI.async.p2p.reduceTensor          	->	 unimplemented
 	MPI.async.p2p.allreduceTensor       	->	 available
 	MPI.async.p2p.sendreceiveTensor     	->	 unimplemented
+	MPI.async.p2p.allgatherTensor       	->	 unimplemented
 	MPI.async.gloo.broadcastTensor      	->	 unavailable
 	MPI.async.gloo.reduceTensor         	->	 unimplemented
 	MPI.async.gloo.allreduceTensor      	->	 unavailable
 	MPI.async.gloo.sendreceiveTensor    	->	 unimplemented
+	MPI.async.gloo.allgatherTensor      	->	 unavailable
 	MPI.async.nccl.broadcastTensor      	->	 available
 	MPI.async.nccl.reduceTensor         	->	 available
 	MPI.async.nccl.allreduceTensor      	->	 available
 	MPI.async.nccl.sendreceiveTensor    	->	 unimplemented
+	MPI.async.nccl.allgatherTensor      	->	 unimplemented
 	MPI.async.nccl.p2p.broadcastTensor  	->	 available
 	MPI.async.nccl.p2p.reduceTensor     	->	 available
 	MPI.async.nccl.p2p.allreduceTensor  	->	 available
 	MPI.async.nccl.p2p.sendreceiveTensor 	->	 unimplemented
+	MPI.async.nccl.p2p.allgatherTensor  	->	 unimplemented
 }
 ```
 

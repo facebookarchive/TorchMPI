@@ -80,6 +80,9 @@ resources::SynchronizationHandle* allreducep2pAsync(THTensorType* t,
 template<typename ScalarType, typename THTensorType>
 void sendreceive(THTensorType* t, int src, int dst);
 
+template<typename ScalarType, typename THTensorType>
+void allgather(THTensorType *t, THTensorType* output);
+
 }}}
 
 #endif
