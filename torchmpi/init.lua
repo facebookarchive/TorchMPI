@@ -35,7 +35,7 @@ MPI.start = argcheck {
    { name = "withCartesianCommunicator", type = "boolean", default = false },
    { name = "collectiveCommunicator", type = "function", opt = true },
    call = function(withCuda, withIPCGroups, customCommunicatorInit, withCartesianCommunicator, collectiveCommunicator)
-      MPI.ipcGroups = (ipcGroups == nil) and true or ipcGroups
+      MPI.ipcGroups = withIPCGroups
 
       local function getHostname()
          local f = io.popen("/bin/hostname")
@@ -429,7 +429,7 @@ initPerNodeCommunicators = function()
             MPI.singleIPCGroup = false
          end
       end
-      if MPI.ipcGroup then
+      if MPI.ipcGroups then
          accessible = accessible
       else
          accessible = ''
