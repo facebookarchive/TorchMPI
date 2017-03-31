@@ -6,17 +6,17 @@ distribution.
 TorchMPI also makes oversubscription of mixed CPU-GPU models practical and allows mutual hiding of CPU computations, GPU computations and communications.
 
 At the moment, TorchMPI provides the following functions and classes:
-- [Basic Functionalities](https://github.com/facebookresearch/TorchMPI/docs/collectives.md) allow starting, synchronizing and stopping processes,
-- [Collectives](https://github.com/facebookresearch/TorchMPI/docs/collectives.md) wrap a subset of MPI, NCCL, GLOO and a custom implementation of collectives useful for deeplearning. These collectives operate on dense Torch tensors and scalar values and come in synchronous or asynchronous flavors,
-- [NN](https://github.com/facebookresearch/TorchMPI/docs/nn.md) extends ```torch.nn``` with support for synchronous and asynchronous collectives to automatically turn a
+- [Basic Functionalities](https://github.com/facebookresearch/TorchMPI/tree/master/docs/collectives.md) allow starting, synchronizing and stopping processes,
+- [Collectives](https://github.com/facebookresearch/TorchMPI/tree/master/docs/collectives.md) wrap a subset of MPI, NCCL, GLOO and a custom implementation of collectives useful for deeplearning. These collectives operate on dense Torch tensors and scalar values and come in synchronous or asynchronous flavors,
+- [NN](https://github.com/facebookresearch/TorchMPI/tree/master/docs/nn.md) extends ```torch.nn``` with support for synchronous and asynchronous collectives to automatically turn a
 ```torch.nn``` model to run on a distributed cluster of CPUs and GPUs,
-- [Engine](https://github.com/facebookresearch/TorchMPI/docs/engine.md) is a [torchnet](https://github.com/torchnet/torchnet) style engine which allows simple networks to
+- [Engine](https://github.com/facebookresearch/TorchMPI/tree/master/docs/engine.md) is a [torchnet](https://github.com/torchnet/torchnet) style engine which allows simple networks to
 train with (a)synchronous SGD while asynchronously loading data (when a proper datasetiterator is used),
-- [Parameter Server](https://github.com/facebookresearch/TorchMPI/docs/parameterserver.md) exposes helper functions to shard a tensor across multiple processes and handle asynchronous client requests,
-- [Communicators](https://github.com/facebookresearch/TorchMPI/docs/communicators.md) allows custom manipulation of groups of processes on which collectives and parameter server mode operates,
-- [Launch scripts](https://github.com/facebookresearch/TorchMPI/docs/launchscripts.md) comprise a few options to simplify launching MPI jobs.
+- [Parameter Server](https://github.com/facebookresearch/TorchMPI/tree/master/docs/parameterserver.md) exposes helper functions to shard a tensor across multiple processes and handle asynchronous client requests,
+- [Communicators](https://github.com/facebookresearch/TorchMPI/tree/master/docs/communicators.md) allows custom manipulation of groups of processes on which collectives and parameter server mode operates,
+- [Launch scripts](https://github.com/facebookresearch/TorchMPI/tree/master/docs/launchscripts.md) comprise a few options to simplify launching MPI jobs.
 
-We also provide a set of [examples](https://github.com/facebookresearch/TorchMPI/examples/mnist/) which demonstrate the various modes of distribution on a trivial network.
+We also provide a set of [examples](https://github.com/facebookresearch/TorchMPI/tree/master/examples/mnist/) which demonstrate the various modes of distribution on a trivial network.
 
 ## Getting started
 The fastest way to use data-parallel SGD is to start from an existing CPU or **single** GPU Torch model.
@@ -63,7 +63,7 @@ Please first check which dependencies you need:
   - [NCCL](https://github.com/NVIDIA/nccl) for fast single node collectives (optional)
   - [GLOO](https://github.com/facebookincubator/gloo/tree/master/gloo) for non-mpi based collective algorithms (optional)
 
-For instructions on how to install dependencies and OpenMPI, see [dependencies](https://github.com/facebookresearch/TorchMPI/dependencies/README.md).
+For instructions on how to install dependencies and OpenMPI, see [dependencies](https://github.com/facebookresearch/TorchMPI/tree/master/dependencies/README.md).
 
 If CUDA and cutorch are not found, the installation will install the CPU-only version.
 
