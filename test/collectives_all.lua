@@ -21,11 +21,15 @@ cmd:option('-numBuffers', 3, 'Number of buffers to use for cpu or gpu collective
 cmd:option('-minBufferSize', bit.lshift(1, 17), "Minimum buffer size for cpu and gpu collectives")
 cmd:option('-maxBufferSize', bit.lshift(1, 20), "Maximum buffer size for cpu and gpu collectives")
 cmd:option('-maxSizeForTreeBasedBroadcast', bit.lshift(1, 22), "Maximum size to use tree-based broadcast")
+cmd:option('-collective', 'all', 'Run a single or all collectives. Options: all | broadcast | reduce | allreduce | sendreceivenext | allgather')
 
 local config = cmd:parse(arg)
 assert(config.tests == 'all' or config.tests == 'allselector' or
        config.tests == 'basic' or config.tests == 'p2p' or
        config.tests == 'nccl' or config.tests == 'gloo')
+assert(config.collective == 'all' or config.collective == 'broadcast' or
+       config.collective == 'reduce' or config.collective == 'allreduce' or
+       config.collective == 'sendreceivenext' or config.collective == 'allgather')
 
 local gpuTable = nil
 if config.processor == 'gpu' then
@@ -466,7 +470,6 @@ local function setImplemented()
       tests.reduce.implemented = true
       tests.allreduce.implemented = true
       tests.sendreceivenext.implemented = true
-      tests.broadcast.implemented = config.sync and not config.gpu
       tests.allgather.implemented =
          not (config.async or config.p2p or config.gloo)
    elseif config.tests == "basic" then
@@ -494,6 +497,24 @@ local function setImplemented()
       tests.broadcast.implemented = implemented
       tests.allreduce.implemented = implemented
    end
+
+   local function enabled(name)
+      return config.collective == "all" or config.collective == name
+   end
+   tests.sendreceivenext.implemented =
+      tests.sendreceivenext.implemented and enabled("sendreceivenext")
+   tests.mpiBarrier.implemented =
+      tests.mpiBarrier.implemented and enabled("mpiBarrier")
+   tests.customBarrier.implemented =
+      tests.customBarrier.implemented and enabled("customBarrier")
+   tests.broadcast.implemented =
+      tests.broadcast.implemented and enabled("broadcast")
+   tests.reduce.implemented =
+      tests.reduce.implemented and enabled("reduce")
+   tests.allreduce.implemented =
+      tests.allreduce.implemented and enabled("allreduce")
+   tests.allgather.implemented =
+      tests.allgather.implemented and enabled("allgather")
 end
 
 local function ncclTable(gpu)
