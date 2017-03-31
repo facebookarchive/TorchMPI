@@ -11,7 +11,7 @@ Additionally setting the following environment variables may be useful:
 A typical launch with OpenMPI may resemble:
 ```mpirun -n 4 --npernode 2 --bind-to none --hostfile ${HOSTFILE} -x CUDA_VISIBLE_DEVICES=2,3 ./scripts/wrap.sh luajit ./test/collectives_all.lua -storage inplace -execution sync -processor gpu -tests p2p -benchmark -hierarchical false -staged false -numBuffers 2```, where -x environment variables are forwarded to all processes.
 
-## [scripts/ompirun.sh](https://github.com/facebookresearch/TorchMPI/tree/master/scripts/test_cpu.sh) and [GPU](https://github.com/facebookresearch/TorchMPI/tree/master/scripts/ompirun.sh)
+## [scripts/ompirun.sh](https://github.com/facebookresearch/TorchMPI/tree/master/scripts/ompirun.sh)
 Sets up different options and larger transfer sizes than activated by default in OpenMPI.
 These options usually work better for deep learning workloads but feel free to experiment and let us know your findings.
 You could call as follow:
