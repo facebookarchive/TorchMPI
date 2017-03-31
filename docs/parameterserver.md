@@ -26,7 +26,7 @@ The ```self._integrate``` function simply copies the received server parameters 
 Derives from torchmpi.Update and implements the mplements the [Elastic Averaging SGD](https://arxiv.org/abs/1412.6651) algorithm.
 Adds the ```beta``` parameter as described in the litterature.
 
-See the [examples](https://github.com/facebookresearch/TorchMPI/examples/mnist/) directory for more details and samples.
+See the [examples](https://github.com/facebookresearch/TorchMPI/tree/master/examples/mnist/) directory for more details and samples.
 
 ## Low-level API
 
@@ -57,4 +57,4 @@ Ensures that a send or a receive operation is complete.
 ### torchmpi.parameterserver.free(userdata<void*> psh)
 Frees the sharded tensor associated with the parameterserver handle.
 
-For code samples, see the [test case](https://github.com/facebookresearch/TorchMPI/test/parameterserver.lua).
+For code samples, see the [test case](https://github.com/facebookresearch/TorchMPI/tree/master/test/parameterserver.lua).

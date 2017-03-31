@@ -35,7 +35,7 @@ For asynchronous collectives: ```userdata<SynchronizationHandle*> torchmpi.async
 - type is a CPU of GPU Torch tensor type
 Asynchronous collectives return a ```SynchronizationHandle``` object on which you should call ```torchmpi.syncHandle()```
 to ensure the communication has completed (see e.g. the
-[mnist_allreduce_async](https://github.com/facebookresearch/TorchMPI/examples/mnist/mnist_allreduce_async.lua) example).
+[mnist_allreduce_async](https://github.com/facebookresearch/TorchMPI/tree/master/examples/mnist/mnist_allreduce_async.lua) example).
 
 ## Scalar collectives
 We provide synchronous scalar collectives offloaded to MPI.
@@ -46,7 +46,7 @@ The nomenclature for such functions is ```torchmpi.[name.]_[type]``` where:
 ## Collective API
 
 The collectives described above all follow the same API outlined here. For examples see the relevant
-[test](https://github.com/facebookresearch/TorchMPI/test/collectives_all.lua).
+[test](https://github.com/facebookresearch/TorchMPI/tree/master/test/collectives_all.lua).
 
 ### broadcastTensor(number root, tensor tensor)
 ### reduceTensor(number root, tensor input[, tensor output = input])
@@ -157,7 +157,7 @@ gpu = {
 # Collective selector
 ### torchmpi.collectiveSelectorToString()
 Returns a string representation of the ```torchmpi.collectiveSelector``` which shows which version
-is called in [```mpi.nn```](https://github.com/facebookresearch/TorchMPI/torchmpi/nn.lua)
+is called in [```mpi.nn```](https://github.com/facebookresearch/TorchMPI/tree/master/torchmpi/nn.lua)
 
 ### (table) torchmpi.collectiveSelector
 The collectives selected by default can be modified by manipulating this table.
