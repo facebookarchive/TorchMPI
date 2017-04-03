@@ -3,8 +3,11 @@
 set -e
 
 test $(which bc) || (echo "wrap.sh need bc, please install (e.g. sudo apt-get install bc)" && exit 1)
-test $(which numactl) || (echo "wrap.sh need numactl, please install (e.g. sudo apt-get install numactl)" && exit 1)
 test $(which hostname) || (echo "wrap.sh need hostname, please install" && exit 1)
+if test -z $(which numactl); then
+   echo "wrap.sh works better with numactl, please install (e.g. sudo apt-get install numactl)"
+   NO_NUMACTL=1
+fi
 
 set +e
 
@@ -27,7 +30,9 @@ if test $1 = 'mpirun'; then
     exit
 fi
 
-sockets=$(numactl --hardware | grep -c cpus)
+if test -z ${NO_NUMACTL}; then
+   sockets=$(numactl --hardware | grep -c cpus)
+fi
 cores=$(grep -c processor /proc/cpuinfo)
 core_per_socket=$(echo "${cores} / ${sockets}" | bc)
 core_per_process=$(echo "${cores} / ${LOCAL_SIZE}" | bc) # IF hyperthreading IS ENABLED AND we don't want hyperthreading, divide by 2.
@@ -43,9 +48,9 @@ if test -z ${NO_NUMACTL}; then
         core_end=$(echo "${core_begin} + ${core_per_process} - 1" | bc)
         NUMACTL="numactl --physcpubind=${core_begin}-${core_end}"
     fi
+else
+   NUMACTL=""
 fi
-
-# NUMACTL=""
 
 MPI_MY_NODE=$(hostname)
 MPI_NODES=$(hostname)
