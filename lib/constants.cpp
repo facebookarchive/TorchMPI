@@ -104,6 +104,12 @@ template <>
 template<> MPI::Datatype mpiType<char>() {
   return MPI_CHAR;
 }
+template<> MPI::Datatype mpiType<unsigned char>() {
+  return MPI_BYTE;
+}
+template<> MPI::Datatype mpiType<short>() {
+  return MPI_SHORT;
+}
 template<> MPI::Datatype mpiType<int>() {
   return MPI_INT;
 }
