@@ -188,6 +188,7 @@ namespace th {
     freeCollectiveResources();
 
     freeRetainedStorage<THByteStorage*>();
+    freeRetainedStorage<THCharStorage*>();
     freeRetainedStorage<THShortStorage*>();
     freeRetainedStorage<THIntStorage*>();
     freeRetainedStorage<THLongStorage*>();
@@ -210,6 +211,8 @@ namespace th {
 
 template void
 torch::mpi::th::retainStorage<THByteTensor>(THByteTensor* tensor);
+template void
+torch::mpi::th::retainStorage<THCharTensor>(THCharTensor* tensor);
 template void
 torch::mpi::th::retainStorage<THShortTensor>(THShortTensor* tensor);
 template void
