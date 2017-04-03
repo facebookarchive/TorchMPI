@@ -73,7 +73,7 @@ If CUDA and cutorch are not found, the installation will install the CPU-only ve
 
 Once you are ready, just run the following `luarocks` command:
 ```sh
-MPI_C_COMPILER=<path to>/mpicc MPI_CXX_COMPILER=<path to>/mpicxx MPI_CXX_COMPILE_FLAGS="-O3" <path to>/luarocks make rocks/torch_mpi-scm-1.rockspec
+MPI_C_COMPILER=<path to>/mpicc MPI_CXX_COMPILER=<path to>/mpicxx MPI_CXX_COMPILE_FLAGS="-O3" <path to>/luarocks make rocks/torchmpi-scm-1.rockspec
 ```
 Note that on certain system your MPI compilers might have different
 names. `MPI_C_COMPILER` and `MPI_CXX_COMPILER` are optional (the install
