@@ -15,7 +15,7 @@
 #endif
 
 #ifdef TORCH_MPI_GLOO
-#include <gloo/common.h>
+#include <gloo/algorithm.h>
 #endif
 
 namespace torch { namespace mpi { namespace constants {
