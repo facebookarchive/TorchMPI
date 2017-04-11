@@ -873,6 +873,8 @@ IPCDesc::IPCDesc(THCState* state, void* data, const MPI::Intracomm& comm) :
   allMemHandles = std::vector<cudaIpcMemHandle_t>(size_);
   allMemHandlePtrs = std::vector<void*>(size_);
   allHostnames = std::vector<std::string>();
+
+  auto allPtrOffsets = std::vector<std::ptrdiff_t>(size_);
   for (int i = 0; i < size_; ++i) {
     std::string s(kHostnameLength, '.');
     allHostnames.push_back(s);
@@ -921,6 +923,15 @@ IPCDesc::IPCDesc(THCState* state, void* data, const MPI::Intracomm& comm) :
   // Place it properly for Allgather
   allMemHandles[rank_] = memHandle;
 
+  comm.Allgather(&ptr_offset,
+                 sizeof(std::ptrdiff_t),
+                 MPI_BYTE,
+                 &allPtrOffsets[0],
+                 sizeof(std::ptrdiff_t),
+                 MPI_BYTE);
+  // Place it properly for Allgather
+  allPtrOffsets[rank_] = ptr_offset;
+
   VLOG_1("@comm: " << &comm << " " << rank_ << "/" << size_
          << " exchanged memhandles: ");
   for (auto m : allMemHandles) {
@@ -942,7 +953,7 @@ IPCDesc::IPCDesc(THCState* state, void* data, const MPI::Intracomm& comm) :
                              allMemHandles[i],
                              cudaIpcMemLazyEnablePeerAccess));
       allMemHandlePtrs[i] = ptr;
-      allDevicePointers[i] = (char *)ptr + ptr_offset;
+      allDevicePointers[i] = (char *)ptr + allPtrOffsets[i];
     } else {
       // Can't open a device in the same process that exported
       allMemHandlePtrs[i] = NULL;
