@@ -16,7 +16,7 @@
 
 #include "resources.h"
 
-#if TORCH_MPI_GLOO_CUDA
+#ifdef TORCH_MPI_GLOO_CUDA
 #include <gloo/cuda_allreduce_ring.h>
 #include <gloo/cuda_allreduce_ring_chunked.h>
 #include <gloo/cuda_broadcast_one_to_all.h>
