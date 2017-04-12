@@ -9,13 +9,14 @@
 /**********************************************************************
  ********************** C Wrapper instantiations **********************
  **********************************************************************/
-#define CPP_TYPE uint8_t
-#define TH_TENSOR_TYPE THByteTensor
-#define THC_TENSOR_TYPE THCudaByteTensor
-FUNCTIONS_TO_INSTANTIATE(CPP_TYPE, TH_TENSOR_TYPE, THC_TENSOR_TYPE)
-#undef CPP_TYPE
-#undef TH_TENSOR_TYPE
-#undef THC_TENSOR_TYPE
+// TODO: nccl unsigned char does not exist
+//#define CPP_TYPE uint8_t
+//#define TH_TENSOR_TYPE THByteTensor
+//#define THC_TENSOR_TYPE THCudaByteTensor
+//FUNCTIONS_TO_INSTANTIATE(CPP_TYPE, TH_TENSOR_TYPE, THC_TENSOR_TYPE)
+//#undef CPP_TYPE
+//#undef TH_TENSOR_TYPE
+//#undef THC_TENSOR_TYPE
 
 #define CPP_TYPE char
 #define TH_TENSOR_TYPE THCharTensor
