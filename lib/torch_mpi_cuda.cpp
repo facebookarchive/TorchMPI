@@ -64,6 +64,10 @@ void torch::mpi::thc::retainStorage<THCudaByteTensor>(
   THCState*,
   THCudaByteTensor* tensor);
 template
+void torch::mpi::thc::retainStorage<THCudaCharTensor>(
+  THCState*,
+  THCudaCharTensor* tensor);
+template
 void torch::mpi::thc::retainStorage<THCudaShortTensor>(
   THCState*,
   THCudaShortTensor* tensor);

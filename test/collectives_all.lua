@@ -22,6 +22,8 @@ cmd:option('-minBufferSize', bit.lshift(1, 17), "Minimum buffer size for cpu and
 cmd:option('-maxBufferSize', bit.lshift(1, 20), "Maximum buffer size for cpu and gpu collectives")
 cmd:option('-maxSizeForTreeBasedBroadcast', bit.lshift(1, 22), "Maximum size to use tree-based broadcast")
 cmd:option('-collective', 'all', 'Run a single or all collectives. Options: all | broadcast | reduce | allreduce | sendreceivenext | allgather')
+cmd:option('-type', 'float', 'Type of tensor to test. Option: char | int | long | float | double | all')
+cmd:option('-uppersizepow', 23, 'Upper bound for exponent of tensor size, i.e. x for 2^x')
 
 local config = cmd:parse(arg)
 assert(config.tests == 'all' or config.tests == 'allselector' or
@@ -30,6 +32,9 @@ assert(config.tests == 'all' or config.tests == 'allselector' or
 assert(config.collective == 'all' or config.collective == 'broadcast' or
        config.collective == 'reduce' or config.collective == 'allreduce' or
        config.collective == 'sendreceivenext' or config.collective == 'allgather')
+assert(config.type == 'char' or config.type == 'int' or
+       config.type == 'long' or config.type == 'float' or
+       config.type == 'double' or config.type == 'all')
 
 local gpuTable = nil
 if config.processor == 'gpu' then
@@ -51,6 +56,13 @@ elseif config.execution == 'both' then
    executionTable = {false, true}
 else
    error("Illegal execution option: " .. config.execution)
+end
+
+local typeTable = nil
+if config.type == 'all' then
+   typeTable = {'char', 'int', 'long', 'float', 'double'}
+else
+   typeTable = {config.type}
 end
 
 local storageTable = nil
@@ -291,8 +303,8 @@ tests.allreduce.check = function(input, output, inputClone)
             mpi:rank(), mpi:size(), min, max, val, output:nElement()))
    end
 
-   -- check inPlace didn't write to input
-   if not config.inPlace then
+   -- check inPlace didn't write to input (and char:abs() seems broken)
+   if not config.inPlace and config.type ~= 'char' then
       assert((input - inputClone):abs():max() == 0,
          "input changed after non inplace collective")
    end
@@ -371,14 +383,14 @@ tests.allgather.generate = function(size)
    -- if size == 10 and mpi.size() == 3, then sizes are {3,4,5}
    local start_size = tests.allgather.startsize(size)
    local isize = start_size + mpi.rank()
-   local input = config.gpu and torch.CudaTensor(isize) or torch.FloatTensor(isize)
+   local input = torch[tester.tensorType(config.type, config.gpu)](isize)
    input:fill(mpi.rank())
 
    local osize = tests.allgather.outputsize(start_size)
    osize = config.inPlace and osize or osize / 2
    -- override meaning of inplace, because it doesn't make much sense for
    -- allgather.  Instead have it mean if the output needs to be ReAlloced.
-   local output = config.gpu and torch.CudaTensor(osize) or torch.FloatTensor(osize)
+   local output = torch[tester.tensorType(config.type, config.gpu)](osize)
 
    return input, output
 end
@@ -421,8 +433,8 @@ tests.allgather.check = function(input, output, inputClone)
             output:nElement(), size_val))
    end
 
-   -- check inPlace didn't write to input
-   if not config.inPlace then
+   -- check inPlace didn't write to input (and char:abs() seems broken)
+   if not config.inPlace and config.type ~= 'char' then
       assert((input - inputClone):abs():max() == 0,
          "input changed after non inplace collective")
    end
@@ -544,12 +556,15 @@ if config.tests == "allselector" then
       for _, gpu in ipairs(gpuTable) do
          for _, inPlace in ipairs(storageTable) do
             for _, singlenode in ipairs({false, true}) do
-               config.async = async
-               config.gpu = gpu
-               config.inPlace = inPlace
-               config.singlenode = singlenode
-               setImplemented()
-               tester.runOneConfig(tests, nRuns, nSkip, config)
+               for _, type in ipairs(typeTable) do
+                  config.async = async
+                  config.gpu = gpu
+                  config.inPlace = inPlace
+                  config.singlenode = singlenode
+                  config.type = type
+                  setImplemented()
+                  tester.runOneConfig(tests, nRuns, nSkip, config)
+               end
             end
          end
       end
@@ -563,14 +578,17 @@ else
             for _, p2p in ipairs(p2pTable) do
                for _, nccl in ipairs(ncclTable(gpu)) do
                   for _, gloo in ipairs(glooTable(inPlace, nccl, p2p)) do
-                     config.async = async
-                     config.gpu = gpu
-                     config.inPlace = inPlace
-                     config.nccl = nccl
-                     config.gloo = gloo
-                     config.p2p = p2p
-                     setImplemented()
-                     tester.runOneConfig(tests, nRuns, nSkip, config)
+                     for _, type in ipairs(typeTable) do
+                        config.async = async
+                        config.gpu = gpu
+                        config.inPlace = inPlace
+                        config.nccl = nccl
+                        config.gloo = gloo
+                        config.p2p = p2p
+                        config.type = type
+                        setImplemented()
+                        tester.runOneConfig(tests, nRuns, nSkip, config)
+                     end
                    end
                end
             end

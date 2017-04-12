@@ -11,13 +11,35 @@ local mpicache = require('torchmpi.cache')
 
 local tester = {}
 
+tester.tensorType = function(type, gpu)
+   if type == 'char' then
+      return gpu and 'CudaCharTensor' or 'CharTensor'
+   elseif type == 'int' then
+      return gpu and 'CudaIntTensor' or 'IntTensor'
+   elseif type == 'long' then
+      return gpu and 'CudaLongTensor' or 'LongTensor'
+   elseif type == 'float' then
+      return gpu and 'CudaTensor' or 'FloatTensor'
+   elseif type == 'double' then
+      return gpu and 'CudaDoubleTensor' or 'DoubleTensor'
+   end
+end
+
+tester.isFloatType = function(type)
+   if type == 'float' or type == 'double' then
+      return true
+   else
+      return false
+   end
+end
+
 tester.runOneConfig = function(tests, nRuns, nSkip, config, printDebug)
    ---------- Test loop
    for testName, T in pairs(tests) do
       if not T.implemented then goto continueTestLoop end
 
       local lower = 8
-      local upper = 23
+      local upper = config.uppersizepow
       for i = lower, upper do -- (latency -> bw bound test)
          mpi.barrier()
 
@@ -27,10 +49,11 @@ tester.runOneConfig = function(tests, nRuns, nSkip, config, printDebug)
          local input
          local output
          if not T.generate then
-            input = config.gpu and torch.CudaTensor(size) or torch.FloatTensor(size)
+            input = torch[tester.tensorType(config.type, config.gpu)](size)
             input:fill(mpi.rank())
 
-            output = config.inPlace and input or input:clone():normal()
+            output = config.inPlace and input or tester.isFloatType(config.type) and
+                     input:clone():normal() or input:clone():geometric(0.2)
          else
             input, output = T.generate(size)
          end
