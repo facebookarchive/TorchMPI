@@ -1171,6 +1171,27 @@ SynchronizationHandle* allreduceAsync(THCState* state,
 
 namespace gloo { namespace thc {
 
+// Gloo does not instantiate the same types as TorchMPI -- need to map
+template<typename T>
+struct TypeToGlooType {
+  typedef T type;
+};
+
+template<>
+struct TypeToGlooType<char> {
+  typedef int8_t type;
+};
+
+template<>
+struct TypeToGlooType<int> {
+  typedef int32_t type;
+};
+
+template<>
+struct TypeToGlooType<long> {
+  typedef int64_t type;
+};
+
 // Collectives operating on THCuda*Tensor
 template<typename ScalarType>
 cudaStream_t broadcast(ScalarType* tensorData,
@@ -1179,8 +1200,9 @@ cudaStream_t broadcast(ScalarType* tensorData,
                        cudaStream_t stream,
                        const shared_ptr<::gloo::mpi::Context>& context)
 {
-  ::gloo::CudaBroadcastOneToAll<ScalarType> broadcast(
-      context, {tensorData}, nElement, root, 0, {stream});
+  typedef typename TypeToGlooType<ScalarType>::type GlooType;
+  ::gloo::CudaBroadcastOneToAll<GlooType> broadcast(
+      context, {(GlooType *)tensorData}, nElement, root, 0, {stream});
   broadcast.run();
 
   THCudaCheck(cudaGetLastError());
@@ -1227,18 +1249,19 @@ cudaStream_t allreduce(ScalarType* inputData,
                        cudaStream_t stream,
                        const shared_ptr<::gloo::mpi::Context>& context) {
   checkReduceFunction(mpiRedOp);
-  std::vector<ScalarType *> v { inputData };
+  typedef typename TypeToGlooType<ScalarType>::type GlooType;
+  std::vector<GlooType *> v { (GlooType *)inputData };
 
 #ifdef TORCH_MPI_CUDA_ALLREDUCE_CHUNKED_ENABLED
   if (nElement <= mpi::constants::kSmallAllreduceSizeGPU) {
 #else
   if (true) {
 #endif
-    ::gloo::CudaAllreduceRing<ScalarType> allreduce(
+    ::gloo::CudaAllreduceRing<GlooType> allreduce(
       context, v, nElement);
     allreduce.run();
   } else {
-    ::gloo::CudaAllreduceRingChunked<ScalarType> allreduce(
+    ::gloo::CudaAllreduceRingChunked<GlooType> allreduce(
       context, v, nElement);
     allreduce.run();
   }
