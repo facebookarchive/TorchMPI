@@ -308,12 +308,14 @@ Communicator::Communicator(const MPI::Intracomm& parent, CommunicatorKey key) :
   MPI::Group parentGroup = parent.Get_group();
   // Intercomm participant
   vector<int> interCommParticipants;
-  int ind = 0;
-  for (auto rIIC : rankInParentToMyRankInIntraComm) {
-    if (rIIC == myRankInIntraComm) {
-      interCommParticipants.push_back(ind);
+  {
+    int ind = 0;
+    for (auto rIIC : rankInParentToMyRankInIntraComm) {
+      if (rIIC == myRankInIntraComm) {
+        interCommParticipants.push_back(ind);
+      }
+      ++ind;
     }
-    ++ind;
   }
 
   int myRankInInterComm = -1;
@@ -1121,15 +1123,15 @@ CollectiveIpcEvents getCollectiveIPCEvents(
                        sizeof(cudaIpcEventHandle_t),
                        MPI_BYTE);
         // For each exported IPC event handle, open it into a local event
-        for (int i = 0; i < commSize(comm); i++) {
-          if (i != commRank(comm)) {
+        for (int j = 0; j < commSize(comm); j++) {
+          if (j != commRank(comm)) {
             THCudaCheck(
-              cudaIpcOpenEventHandle(&events[i], eventHandles[i]));
+              cudaIpcOpenEventHandle(&events[j], eventHandles[j]));
           } else {
-            events[i] = event;
+            events[j] = event;
           }
           // Local sanity check on construction
-          THCudaCheck(cudaStreamWaitEvent(0, events[i], 0));
+          THCudaCheck(cudaStreamWaitEvent(0, events[j], 0));
         }
       }
 
