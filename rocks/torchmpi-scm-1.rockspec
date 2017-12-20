@@ -2,7 +2,7 @@ package = "torchmpi"
 version = "scm-1"
 
 source = {
-   url = "git://github.com/nicolasvasilache/torchmpi.git"
+   url = "git://github.com/facebookresearch/TorchMPI.git"
 }
 
 description = {
@@ -10,7 +10,7 @@ description = {
    detailed = [[
       Various abstractions for baseline distributed torch.
    ]],
-   homepage = "https://github.com/nicolasvasilache/torchmpi",
+   homepage = "https://github.com/facebookresearch/TorchMPI",
    license = "BSD"
 }
 
